@@ -4,7 +4,7 @@ Automated weekly engine that ranks Wolt cities by courier reactivation urgency. 
 
 ## 📊 Live Dashboard
 
-[View the live dashboard →](https://docs.google.com/spreadsheets/d/1_gL4Aac5xQ3pKuR4Cli3IMeJCwDyx4yswZmgfe_v9BA/pubhtml)
+[View the live dashboard →](https://docs.google.com/spreadsheets/d/e/2PACX-1vSfm--uv4W3UhZ63I3IS-lzjcNUjsRp2tRNXYhNugVR9NqJ_O7kBskV-K4WjHEcpsmBm3i-5qaa8RQW/pubhtml)
 
 The dashboard has 4 tabs:
 - **🏆 City Ranking** — all cities ranked by priority score
