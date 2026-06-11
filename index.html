@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Courier Reactivation Engine — Wolt</title>
+<style>
+  :root {
+    --teal: #009DE0;
+    --teal-dark: #0081B8;
+    --teal-light: #E6F6FC;
+    --black: #1A1A1A;
+    --gray-1: #F5F5F5;
+    --gray-2: #E8E8E8;
+    --gray-3: #BDBDBD;
+    --gray-4: #757575;
+    --red: #E53935;
+    --red-light: #FFEBEE;
+    --yellow: #F59E0B;
+    --yellow-light: #FFFBEB;
+    --green: #22C55E;
+    --green-light: #F0FDF4;
+    --white: #FFFFFF;
+    --radius: 8px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-1); color: var(--black); line-height: 1.5; }
+
+  /* ── Header ── */
+  header { background: var(--black); color: var(--white); padding: 0 24px; }
+  .header-inner { max-width: 1280px; margin: 0 auto; padding: 20px 0 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .header-left h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-left p { font-size: 13px; color: var(--gray-3); margin-top: 4px; }
+  .header-badges { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 100px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-live { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .badge-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #4ADE80; animation: pulse 2s infinite; }
+  .badge-source { background: rgba(255,255,255,0.08); color: var(--gray-3); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .nav-tabs { display: flex; gap: 0; border-top: 1px solid rgba(255,255,255,0.08); }
+  .nav-tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--gray-3); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .nav-tab:hover { color: var(--white); }
+  .nav-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+  /* ── Main ── */
+  main { max-width: 1280px; margin: 0 auto; padding: 24px; }
+
+  /* ── Stats bar ── */
+  .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--white); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); border: 1px solid var(--gray-2); }
+  .stat-card .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-4); margin-bottom: 6px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .stat-card.critical .value { color: var(--red); }
+  .stat-card.opportunity .value { color: var(--yellow); }
+  .stat-card.stable .value { color: var(--green); }
+
+  /* ── Controls ── */
+  .controls { background: var(--white); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--gray-2); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .search-box { flex: 1; min-width: 200px; position: relative; }
+  .search-box input { width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--gray-2); border-radius: 6px; font-size: 13px; outline: none; background: var(--gray-1); }
+  .search-box input:focus { border-color: var(--teal); background: var(--white); }
+  .search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--gray-3); }
+  .filter-group { display: flex; align-items: center; gap: 6px; }
+  .filter-label { font-size: 12px; color: var(--gray-4); font-weight: 500; }
+  .filter-btn { padding: 6px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--gray-2); background: var(--white); cursor: pointer; transition: all 0.15s; color: var(--gray-4); }
+  .filter-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .filter-btn.active { background: var(--teal); border-color: var(--teal); color: var(--white); }
+  .filter-btn.critical.active { background: var(--red); border-color: var(--red); }
+  .filter-btn.opportunity.active { background: var(--yellow); border-color: var(--yellow); }
+  .filter-btn.stable.active { background: var(--green); border-color: var(--green); }
+  select.country-select { padding: 7px 10px; border: 1.5px solid var(--gray-2); border-radius: 6px; font-size: 12px; font-weight: 500; background: var(--white); color: var(--black); cursor: pointer; outline: none; }
+  select.country-select:focus { border-color: var(--teal); }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--gray-2); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--gray-1); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-4); border-bottom: 1px solid var(--gray-2); cursor: pointer; user-select: none; white-space: nowrap; }
+  thead th:hover { color: var(--black); }
+  thead th .sort-icon { margin-left: 4px; opacity: 0.4; }
+  thead th.sorted .sort-icon { opacity: 1; color: var(--teal); }
+  tbody tr { border-bottom: 1px solid var(--gray-2); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--teal-light); }
+  tbody td { padding: 11px 14px; vertical-align: middle; }
+  .rank { font-weight: 700; color: var(--gray-4); font-size: 12px; width: 36px; text-align: center; }
+  .city-name { font-weight: 600; }
+  .country-code { display: inline-block; font-size: 10px; font-weight: 700; background: var(--gray-1); border: 1px solid var(--gray-2); border-radius: 4px; padding: 1px 5px; color: var(--gray-4); letter-spacing: 0.5px; }
+  .tier-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 100px; white-space: nowrap; }
+  .tier-critical { background: var(--red-light); color: var(--red); }
+  .tier-opportunity { background: var(--yellow-light); color: #92400E; }
+  .tier-stable { background: var(--green-light); color: #14532D; }
+  .score-cell { display: flex; align-items: center; gap: 8px; }
+  .score-num { font-weight: 700; font-size: 15px; min-width: 24px; }
+  .score-bar-wrap { flex: 1; height: 6px; background: var(--gray-2); border-radius: 3px; min-width: 60px; }
+  .score-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .bar-critical { background: var(--red); }
+  .bar-opportunity { background: var(--yellow); }
+  .bar-stable { background: var(--green); }
+  .mini-bars { display: flex; gap: 3px; align-items: flex-end; height: 20px; }
+  .mini-bar-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .mini-bar-fill { width: 8px; border-radius: 2px 2px 0 0; background: var(--teal); opacity: 0.6; }
+  .mini-bar-fill.d { background: #3B82F6; }
+  .mini-bar-fill.s { background: #EF4444; }
+  .mini-bar-fill.dormant { background: #8B5CF6; }
+  .mini-bar-fill.e { background: #F59E0B; }
+  .num-cell { font-variant-numeric: tabular-nums; color: var(--black); }
+  .num-cell.muted { color: var(--gray-4); }
+  .wow-pos { color: var(--green); font-weight: 600; }
+  .wow-neg { color: var(--red); font-weight: 600; }
+  .loading { text-align: center; padding: 80px 20px; color: var(--gray-4); }
+  .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--gray-2); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--gray-4); font-size: 14px; }
+
+  /* ── Footer ── */
+  .table-footer { padding: 10px 16px; font-size: 11px; color: var(--gray-3); border-top: 1px solid var(--gray-2); display: flex; justify-content: space-between; align-items: center; }
+
+  /* ── FAQ Tab ── */
+  .faq-section { display: none; }
+  .faq-section.active { display: block; }
+  .ranking-section { display: block; }
+  .ranking-section.hidden { display: none; }
+  .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 768px) { .faq-grid { grid-template-columns: 1fr; } }
+  .faq-card { background: var(--white); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--gray-2); }
+  .faq-card h3 { font-size: 13px; font-weight: 700; color: var(--black); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--gray-2); }
+  .score-model { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .score-model th { text-align: left; padding: 6px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--gray-4); border-bottom: 1px solid var(--gray-2); }
+  .score-model td { padding: 8px 8px; border-bottom: 1px solid var(--gray-2); vertical-align: top; }
+  .score-model tr:last-child td { border-bottom: none; }
+  .weight-badge { display: inline-block; font-weight: 700; font-size: 12px; color: var(--teal); }
+  .faq-item { margin-bottom: 0; border-bottom: 1px solid var(--gray-2); }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-q { padding: 12px 0; cursor: pointer; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .faq-q:hover { color: var(--teal); }
+  .faq-icon { font-size: 16px; color: var(--gray-3); transition: transform 0.2s; flex-shrink: 0; }
+  .faq-a { font-size: 13px; color: var(--gray-4); line-height: 1.6; padding-bottom: 12px; display: none; }
+  .faq-item.open .faq-a { display: block; }
+  .faq-item.open .faq-icon { transform: rotate(45deg); }
+  .tier-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .tier-legend-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .definition-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12px; margin-top: 8px; }
+  .definition-term { font-weight: 600; color: var(--black); padding: 3px 0; }
+  .definition-desc { color: var(--gray-4); padding: 3px 0; }
+
+  @media (max-width: 900px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    main { padding: 16px; }
+  }
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .header-inner { flex-direction: column; }
+    table { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-left">
+      <h1>🚴 Courier Reactivation Engine</h1>
+      <p>Weekly city rankings by supply-demand reactivation opportunity</p>
+      <div class="header-badges">
+        <span class="badge badge-live" id="live-badge">Live</span>
+        <span class="badge badge-source">Snowflake PRODUCTION</span>
+        <span class="badge badge-source" id="week-badge">Loading…</span>
+      </div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showTab('ranking')">🏆 City Ranking</div>
+    <div class="nav-tab" onclick="showTab('faq')">📖 Methodology & FAQ</div>
+  </div>
+</header>
+
+<main>
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="label">Cities Tracked</div>
+      <div class="value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card critical">
+      <div class="label">🔴 Critical</div>
+      <div class="value" id="stat-critical">—</div>
+    </div>
+    <div class="stat-card opportunity">
+      <div class="label">🟡 Opportunity</div>
+      <div class="value" id="stat-opportunity">—</div>
+    </div>
+    <div class="stat-card stable">
+      <div class="label">🟢 Stable</div>
+      <div class="value" id="stat-stable">—</div>
+    </div>
+  </div>
+
+  <!-- Ranking section -->
+  <div id="ranking-section" class="ranking-section">
+    <div class="controls">
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="Search city or country…" oninput="applyFilters()">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Tier:</span>
+        <button class="filter-btn active" data-tier="all" onclick="setTierFilter('all', this)">All</button>
+        <button class="filter-btn critical" data-tier="critical" onclick="setTierFilter('critical', this)">🔴 Critical</button>
+        <button class="filter-btn opportunity" data-tier="opportunity" onclick="setTierFilter('opportunity', this)">🟡 Opportunity</button>
+        <button class="filter-btn stable" data-tier="stable" onclick="setTierFilter('stable', this)">🟢 Stable</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Country:</span>
+        <select class="country-select" id="country-select" onchange="applyFilters()">
+          <option value="">All countries</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="loading" id="loading-state">
+        <div class="loading-spinner"></div>
+        <div>Fetching latest data from Snowflake…</div>
+      </div>
+      <table id="main-table" style="display:none">
+        <thead>
+          <tr>
+            <th onclick="sortBy('rank')" class="sorted" data-col="rank"># <span class="sort-icon">↑</span></th>
+            <th onclick="sortBy('city')" data-col="city">City <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('country')" data-col="country">Country <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('tier')" data-col="tier">Tier <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('score')" data-col="score">Score <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('score_breakdown')" data-col="score_breakdown" title="Demand / Supply Decline / Dormant Pool / ETA">Breakdown <span class="sort-icon" style="opacity:0">↕</span></th>
+            <th onclick="sortBy('orders')" data-col="orders">Orders <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('couriers')" data-col="couriers">Couriers <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('wow')" data-col="wow">WoW % <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('dormant')" data-col="dormant">Dormant <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('eta')" data-col="eta">Avg ETA <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('rtd')" data-col="rtd">RTD <span class="sort-icon">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state" style="display:none">No cities match your filters.</div>
+      <div class="table-footer" id="table-footer" style="display:none">
+        <span id="row-count"></span>
+        <span>Min. 100 active couriers · Score = 35% Demand + 25% Supply Decline + 25% Dormant + 15% ETA</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ section -->
+  <div id="faq-section" class="faq-section">
+    <div class="faq-grid">
+      <div class="faq-card">
+        <h3>Scoring Model</h3>
+        <table class="score-model">
+          <thead><tr><th>Component</th><th>Weight</th><th>Signal</th></tr></thead>
+          <tbody>
+            <tr><td>Demand Intensity</td><td><span class="weight-badge">35%</span></td><td>Orders ÷ Active Couriers (normalised)</td></tr>
+            <tr><td>Supply Decline</td><td><span class="weight-badge">25%</span></td><td>Courier WoW % drop (max 0, −WoW%)</td></tr>
+            <tr><td>Dormant Pool</td><td><span class="weight-badge">25%</span></td><td>Dormant courier count (normalised)</td></tr>
+            <tr><td>ETA Pressure</td><td><span class="weight-badge">15%</span></td><td>Avg delivery time (normalised)</td></tr>
+          </tbody>
+        </table>
+        <div class="tier-legend" style="margin-top:14px">
+          <div class="tier-legend-row"><span class="tier-badge tier-critical">🔴 Critical</span> Score ≥ 70</div>
+          <div class="tier-legend-row"><span class="tier-badge tier-opportunity">🟡 Opportunity</span> Score 40–69</div>
+          <div class="tier-legend-row"><span class="tier-badge tier-stable">🟢 Stable</span> Score &lt; 40</div>
+        </div>
+      </div>
+      <div class="faq-card">
+        <h3>Key Definitions</h3>
+        <div class="definition-grid">
+          <div class="definition-term">Dormant courier</div>
+          <div class="definition-desc">Active (≥1 delivery) in weeks 5–24 ago, zero deliveries in the last 4 weeks. Primary CRM reactivation target.</div>
+          <div class="definition-term">RTD conversion</div>
+          <div class="definition-desc">Couriers who made their first delivery this week (Ready-To-Deliver). Proxy for newly activated supply.</div>
+          <div class="definition-term">WoW %</div>
+          <div class="definition-desc">Week-over-week change in active couriers. Negative values indicate supply contraction.</div>
+          <div class="definition-term">Min. city size</div>
+          <div class="definition-desc">Only cities with ≥ 100 active couriers are included — smaller cities have too little data to score reliably.</div>
+        </div>
+      </div>
+    </div>
+    <div class="faq-card">
+      <h3>Frequently Asked Questions</h3>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">What is the Reactivation Opportunity Engine? <span class="faq-icon">+</span></div>
+        <div class="faq-a">A weekly automated system that ranks Wolt cities by how much untapped courier supply is available through reactivation. Each Monday it pulls last week's data from Snowflake, computes a weighted priority score per city, and updates this dashboard. The goal is to help CRM and Operations teams direct their reactivation campaigns to the cities where they'll have the most impact.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How is the Priority Score calculated? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Each city gets four component scores (0–100), each normalised against all cities. The composite is: <strong>Score = 0.35 × Demand + 0.25 × Supply Decline + 0.25 × Dormant + 0.15 × ETA</strong>. Demand = orders per courier. Supply Decline = courier week-over-week drop (0 if positive). Dormant = count of couriers dormant 5–24 weeks. ETA = average delivery time. All values are normalised by dividing by the city-level maximum across all markets.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">What is a dormant courier and why target them? <span class="faq-icon">+</span></div>
+        <div class="faq-a">A dormant courier made at least one delivery between 5 and 24 weeks ago but has had zero deliveries in the last 4 weeks. They are the highest-value reactivation target because they already know the platform — no onboarding friction — and their churn is often due to addressable reasons (low offer frequency, life events, competitor engagement). Reactivating one dormant courier costs far less than acquiring a new one.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Why do some high-order cities rank low? <span class="faq-icon">+</span></div>
+        <div class="faq-a">The score reflects reactivation <em>opportunity</em>, not absolute volume. A large city with a healthy, growing supply base and short ETAs scores low even with high order volumes, because there is little signal that reactivation is needed. Cities rank highly when demand is rising relative to supply, couriers are churning (negative WoW), a large dormant pool exists, and ETAs are stretched — all pointing to a supply gap that reactivation can close.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Where does the data come from? <span class="faq-icon">+</span></div>
+        <div class="faq-a">All data is sourced from Wolt's Snowflake instance (<code>DOORDASH-IG78751_AWS_EU_WEST_1</code>, <code>PRODUCTION</code> database). Supply and WoW data: <code>PRODUCTION.COURIER.CITY_METRICS_GD</code>. Order and ETA data: <code>PRODUCTION.COURIER.FLEET_SUPPLY_HOURS</code>. Dormant pool: <code>PRODUCTION.COURIER.COURIER_PARTNER_METRICS</code>. RTD and onboarding: <code>PRODUCTION.COURIER.ONBOARDING_METRICS_GD</code>.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">When does the dashboard update? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Every Monday at 08:00 (CET), the engine queries Snowflake for the previous week's data, scores all cities, and updates the Google Sheet that powers this page. The data always reflects the most recently completed ISO week.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const PUBLISHED_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSfm--uv4W3UhZ63I3IS-lzjcNUjsRp2tRNXYhNugVR9NqJ_O7kBskV-K4WjHEcpsmBm3i-5qaa8RQW/pub';
+const RANKING_URL = `${PUBLISHED_BASE}?gid=0&single=true&output=csv`;
+
+let allRows = [];
+let currentSort = { col: 'rank', asc: true };
+let tierFilter = 'all';
+
+// ── Fetch & parse CSV ──
+async function loadData() {
+  try {
+    const res = await fetch(RANKING_URL);
+    const text = await res.text();
+    const rows = parseCSV(text);
+
+    // Row 0 = title, Row 1 = formula legend, Row 2 = empty, Row 3 = headers, Row 4+ = data
+    const dataRows = rows.slice(4).filter(r => r[0] && r[0].trim() !== '' && !isNaN(r[0]));
+
+    // Extract week from title row
+    const titleRow = rows[0] ? rows[0][0] || '' : '';
+    const weekMatch = titleRow.match(/Week of (.+)/);
+    if (weekMatch) {
+      document.getElementById('week-badge').textContent = 'Week of ' + weekMatch[1].trim();
+    }
+
+    allRows = dataRows.map(r => ({
+      rank:     parseInt(r[0]) || 0,
+      city:     r[1] || '',
+      country:  r[2] || '',
+      score:    parseInt(r[3]) || 0,
+      tier:     r[4] || '',
+      orders:   parseInt(r[5]) || 0,
+      couriers: parseInt(r[6]) || 0,
+      wow:      parseFloat(r[7]) || 0,
+      dormant:  parseInt(r[8]) || 0,
+      eta:      parseFloat(r[9]) || 0,
+      supply_hours: parseInt(r[10]) || 0,
+      rtd:      parseInt(r[11]) || 0,
+      apps:     parseInt(r[12]) || 0,
+      conv28d:  parseFloat(r[13]) || 0,
+      d_score:  parseInt(r[14]) || 0,
+      s_score:  parseInt(r[15]) || 0,
+      dormant_score: parseInt(r[16]) || 0,
+      eta_score: parseInt(r[17]) || 0,
+    }));
+
+    updateStats();
+    populateCountryFilter();
+    applyFilters();
+
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('main-table').style.display = '';
+    document.getElementById('table-footer').style.display = '';
+
+  } catch (e) {
+    document.getElementById('loading-state').innerHTML = '<div style="color:#E53935">Failed to load data. Please try again later.</div>';
+    console.error(e);
+  }
+}
+
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const row = [];
+    let inQ = false, cell = '';
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { row.push(cell.trim()); cell = ''; }
+      else { cell += c; }
+    }
+    row.push(cell.trim());
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ── Stats ──
+function updateStats() {
+  document.getElementById('stat-total').textContent = allRows.length;
+  document.getElementById('stat-critical').textContent = allRows.filter(r => r.tier.includes('Critical')).length;
+  document.getElementById('stat-opportunity').textContent = allRows.filter(r => r.tier.includes('Opportunity')).length;
+  document.getElementById('stat-stable').textContent = allRows.filter(r => r.tier.includes('Stable')).length;
+}
+
+// ── Country filter ──
+function populateCountryFilter() {
+  const countries = [...new Set(allRows.map(r => r.country))].sort();
+  const sel = document.getElementById('country-select');
+  countries.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Filters & sort ──
+function setTierFilter(tier, btn) {
+  tierFilter = tier;
+  document.querySelectorAll('[data-tier]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const country = document.getElementById('country-select').value;
+
+  let filtered = allRows.filter(r => {
+    const matchSearch = !search || r.city.toLowerCase().includes(search) || r.country.toLowerCase().includes(search);
+    const matchCountry = !country || r.country === country;
+    const matchTier = tierFilter === 'all' ||
+      (tierFilter === 'critical' && r.tier.includes('Critical')) ||
+      (tierFilter === 'opportunity' && r.tier.includes('Opportunity')) ||
+      (tierFilter === 'stable' && r.tier.includes('Stable'));
+    return matchSearch && matchCountry && matchTier;
+  });
+
+  filtered = sortRows(filtered);
+  renderTable(filtered);
+  document.getElementById('row-count').textContent = `${filtered.length} of ${allRows.length} cities`;
+}
+
+// ── Sort ──
+function sortBy(col) {
+  if (currentSort.col === col) { currentSort.asc = !currentSort.asc; }
+  else { currentSort = { col, asc: col === 'rank' }; }
+  document.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('sorted');
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = '↕';
+  });
+  const activeCol = document.querySelector(`[data-col="${col}"]`);
+  if (activeCol) {
+    activeCol.classList.add('sorted');
+    const icon = activeCol.querySelector('.sort-icon');
+    if (icon) icon.textContent = currentSort.asc ? '↑' : '↓';
+  }
+  applyFilters();
+}
+
+function sortRows(rows) {
+  const { col, asc } = currentSort;
+  const colMap = {
+    rank: 'rank', city: 'city', country: 'country', tier: 'tier',
+    score: 'score', orders: 'orders', couriers: 'couriers', wow: 'wow',
+    dormant: 'dormant', eta: 'eta', rtd: 'rtd', score_breakdown: 'score'
+  };
+  const key = colMap[col] || 'rank';
+  return [...rows].sort((a, b) => {
+    let va = a[key], vb = b[key];
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return asc ? -1 : 1;
+    if (va > vb) return asc ? 1 : -1;
+    return 0;
+  });
+}
+
+// ── Render ──
+function tierClass(tier) {
+  if (tier.includes('Critical')) return 'critical';
+  if (tier.includes('Opportunity')) return 'opportunity';
+  return 'stable';
+}
+function tierLabel(tier) {
+  if (tier.includes('Critical')) return '🔴 Critical';
+  if (tier.includes('Opportunity')) return '🟡 Opportunity';
+  return '🟢 Stable';
+}
+function fmt(n, decimals = 0) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('table-body');
+  const empty = document.getElementById('empty-state');
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('main-table').style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  document.getElementById('main-table').style.display = '';
+
+  const tc = tierClass;
+  const maxScore = Math.max(...allRows.map(r => r.score), 1);
+
+  tbody.innerHTML = rows.map(r => {
+    const tc_ = tc(r.tier);
+    const wowClass = r.wow >= 0 ? 'wow-pos' : 'wow-neg';
+    const wowSign = r.wow > 0 ? '+' : '';
+    // Mini breakdown bars
+    const ds = r.d_score || 0, ss = r.s_score || 0, dom = r.dormant_score || 0, es = r.eta_score || 0;
+    const maxComp = Math.max(ds, ss, dom, es, 1);
+    const barH = (v) => Math.max(4, Math.round((v / 100) * 18));
+
+    return `<tr>
+      <td class="rank">${r.rank}</td>
+      <td><span class="city-name">${r.city}</span></td>
+      <td><span class="country-code">${r.country}</span></td>
+      <td><span class="tier-badge tier-${tc_}">${tierLabel(r.tier)}</span></td>
+      <td>
+        <div class="score-cell">
+          <span class="score-num">${r.score}</span>
+          <div class="score-bar-wrap">
+            <div class="score-bar bar-${tc_}" style="width:${Math.round(r.score/maxScore*100)}%"></div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="mini-bars" title="Demand ${ds} / Supply ${ss} / Dormant ${dom} / ETA ${es}">
+          <div class="mini-bar-item"><div class="mini-bar-fill d" style="height:${barH(ds)}px" title="Demand: ${ds}"></div></div>
+          <div class="mini-bar-item"><div class="mini-bar-fill s" style="height:${barH(ss)}px" title="Supply Decline: ${ss}"></div></div>
+          <div class="mini-bar-item"><div class="mini-bar-fill dormant" style="height:${barH(dom)}px" title="Dormant: ${dom}"></div></div>
+          <div class="mini-bar-item"><div class="mini-bar-fill e" style="height:${barH(es)}px" title="ETA: ${es}"></div></div>
+        </div>
+      </td>
+      <td class="num-cell">${fmt(r.orders)}</td>
+      <td class="num-cell">${fmt(r.couriers)}</td>
+      <td class="num-cell ${wowClass}">${wowSign}${fmt(r.wow, 1)}%</td>
+      <td class="num-cell">${fmt(r.dormant)}</td>
+      <td class="num-cell muted">${fmt(r.eta, 1)} min</td>
+      <td class="num-cell">${fmt(r.rtd)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Tabs ──
+function showTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab')[tab === 'ranking' ? 0 : 1].classList.add('active');
+  document.getElementById('ranking-section').classList.toggle('hidden', tab !== 'ranking');
+  document.getElementById('faq-section').classList.toggle('active', tab !== 'ranking');
+}
+
+// ── FAQ accordion ──
+function toggleFaq(el) {
+  const item = el.parentElement;
+  item.classList.toggle('open');
+}
+
+loadData();
+</script>
+</body>
+</html>
