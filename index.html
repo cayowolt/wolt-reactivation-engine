@@ -308,57 +308,29 @@
       </div>
       <div class="faq-item">
         <div class="faq-q" onclick="toggleFaq(this)">When does the dashboard update? <span class="faq-icon">+</span></div>
-        <div class="faq-a">Every Monday at 08:00 (CET), the engine queries Snowflake for the previous week's data, scores all cities, and updates the Google Sheet that powers this page. The data always reflects the most recently completed ISO week.</div>
+        <div class="faq-a">Every Monday at 08:00 (CET), the engine queries Snowflake for the previous week's data, scores all cities, and pushes a fresh <code>data.json</code> to this GitHub repository. The page loads that file directly — no authentication required. The data always reflects the most recently completed ISO week.</div>
       </div>
     </div>
   </div>
 </main>
 
 <script>
-const PUBLISHED_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSfm--uv4W3UhZ63I3IS-lzjcNUjsRp2tRNXYhNugVR9NqJ_O7kBskV-K4WjHEcpsmBm3i-5qaa8RQW/pub';
-const RANKING_URL = `${PUBLISHED_BASE}?gid=0&single=true&output=csv`;
-
 let allRows = [];
 let currentSort = { col: 'rank', asc: true };
 let tierFilter = 'all';
 
-// ── Fetch & parse CSV ──
+// ── Fetch data.json (same-origin, no CORS issues) ──
 async function loadData() {
   try {
-    const res = await fetch(RANKING_URL);
-    const text = await res.text();
-    const rows = parseCSV(text);
+    const res = await fetch('./data.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
 
-    // Row 0 = title, Row 1 = formula legend, Row 2 = empty, Row 3 = headers, Row 4+ = data
-    const dataRows = rows.slice(4).filter(r => r[0] && r[0].trim() !== '' && !isNaN(r[0]));
-
-    // Extract week from title row
-    const titleRow = rows[0] ? rows[0][0] || '' : '';
-    const weekMatch = titleRow.match(/Week of (.+)/);
-    if (weekMatch) {
-      document.getElementById('week-badge').textContent = 'Week of ' + weekMatch[1].trim();
+    if (json.week) {
+      document.getElementById('week-badge').textContent = 'Week of ' + json.week;
     }
 
-    allRows = dataRows.map(r => ({
-      rank:     parseInt(r[0]) || 0,
-      city:     r[1] || '',
-      country:  r[2] || '',
-      score:    parseInt(r[3]) || 0,
-      tier:     r[4] || '',
-      orders:   parseInt(r[5]) || 0,
-      couriers: parseInt(r[6]) || 0,
-      wow:      parseFloat(r[7]) || 0,
-      dormant:  parseInt(r[8]) || 0,
-      eta:      parseFloat(r[9]) || 0,
-      supply_hours: parseInt(r[10]) || 0,
-      rtd:      parseInt(r[11]) || 0,
-      apps:     parseInt(r[12]) || 0,
-      conv28d:  parseFloat(r[13]) || 0,
-      d_score:  parseInt(r[14]) || 0,
-      s_score:  parseInt(r[15]) || 0,
-      dormant_score: parseInt(r[16]) || 0,
-      eta_score: parseInt(r[17]) || 0,
-    }));
+    allRows = json.cities || [];
 
     updateStats();
     populateCountryFilter();
@@ -372,24 +344,6 @@ async function loadData() {
     document.getElementById('loading-state').innerHTML = '<div style="color:#E53935">Failed to load data. Please try again later.</div>';
     console.error(e);
   }
-}
-
-function parseCSV(text) {
-  const rows = [];
-  const lines = text.split('\n');
-  for (const line of lines) {
-    const row = [];
-    let inQ = false, cell = '';
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') { inQ = !inQ; }
-      else if (c === ',' && !inQ) { row.push(cell.trim()); cell = ''; }
-      else { cell += c; }
-    }
-    row.push(cell.trim());
-    rows.push(row);
-  }
-  return rows;
 }
 
 // ── Stats ──
